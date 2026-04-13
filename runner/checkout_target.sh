@@ -31,8 +31,8 @@ if [ -z "${TARGET_REPO_TOKEN:-}" ]; then
 fi
 
 rm -rf "$TARGET_ROOT"
-git clone "https://x-access-token:${TARGET_REPO_TOKEN}@github.com/${TARGET_REPO}.git" "$TARGET_ROOT"
+git clone --quiet "https://x-access-token:${TARGET_REPO_TOKEN}@github.com/${TARGET_REPO}.git" "$TARGET_ROOT" >&2
 cd "$TARGET_ROOT"
-git checkout "$TARGET_BRANCH"
-git checkout -b "$WORK_BRANCH"
+git checkout --quiet "$TARGET_BRANCH" >&2
+git checkout --quiet -b "$WORK_BRANCH" >&2
 echo "$TARGET_ROOT"
