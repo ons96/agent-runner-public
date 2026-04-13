@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PACKET_FILE="${1:?Usage: checkout_target.sh <packet.json>}"
+TARGET_ROOT="${2:-target-repo}"
+TARGET_REPO=$(python3 - <<'PY' "$PACKET_FILE"
+import json, sys
+from pathlib import Path
+packet = json.loads(Path(sys.argv[1]).read_text())
+print(packet['target_repo'])
+PY
+)
+TARGET_BRANCH=$(python3 - <<'PY' "$PACKET_FILE"
+import json, sys
+from pathlib import Path
+packet = json.loads(Path(sys.argv[1]).read_text())
+print(packet['target_branch'])
+PY
+)
+WORK_BRANCH=$(python3 - <<'PY' "$PACKET_FILE"
+import json, sys
+from pathlib import Path
+packet = json.loads(Path(sys.argv[1]).read_text())
+print(packet['work_branch'])
+PY
+)
+
+if [ -z "${TARGET_REPO_TOKEN:-}" ]; then
+    echo "ERROR: TARGET_REPO_TOKEN must be set" >&2
+    exit 1
+fi
+
+rm -rf "$TARGET_ROOT"
+git clone "https://x-access-token:${TARGET_REPO_TOKEN}@github.com/${TARGET_REPO}.git" "$TARGET_ROOT"
+cd "$TARGET_ROOT"
+git checkout "$TARGET_BRANCH"
+git checkout -b "$WORK_BRANCH"
+echo "$TARGET_ROOT"
