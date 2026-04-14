@@ -30,6 +30,13 @@ if [ -z "${TARGET_REPO_TOKEN:-}" ]; then
     exit 1
 fi
 
+if [ -n "${ALLOWED_TARGET_REPOS:-}" ]; then
+    if ! echo "$ALLOWED_TARGET_REPOS" | grep -qF "$TARGET_REPO"; then
+        echo "ERROR: target_repo '$TARGET_REPO' not in ALLOWED_TARGET_REPOS allowlist" >&2
+        exit 1
+    fi
+fi
+
 rm -rf "$TARGET_ROOT"
 git clone --quiet "https://x-access-token:${TARGET_REPO_TOKEN}@github.com/${TARGET_REPO}.git" "$TARGET_ROOT" >&2
 cd "$TARGET_ROOT"
