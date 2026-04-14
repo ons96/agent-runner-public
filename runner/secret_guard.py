@@ -6,8 +6,14 @@ from pathlib import Path
 
 PATTERNS = [
     r"github_pat_[A-Za-z0-9_]{20,}",
-    r"ghp_[A-Za-z0-9]{20,}",
+    r"gh[pousr]_[A-Za-z0-9]{20,}",
     r"AIza[0-9A-Za-z\-_]{20,}",
+    r"sk-[A-Za-z0-9]{20,}",
+    r"sk_live_[A-Za-z0-9]{20,}",
+    r"rk_live_[A-Za-z0-9]{20,}",
+    r"AKIA[A-Z0-9]{16}",
+    r"-----BEGIN [A-Z ]*PRIVATE KEY-----",
+    r"Bearer [A-Za-z0-9\-._~+/]+=*",
 ]
 
 
