@@ -59,13 +59,12 @@ if command -v opencode &>/dev/null; then
         cp "$SCRIPT_DIR/opencode-runner.json" .opencode.json
     fi
     
-    # Set API keys from environment
-    export OPENCODE_PROVIDER_VPS_GATEWAY_API_KEY="${PROXY_API_KEY:-poop96}"
-    export OPENCODE_PROVIDER_GROQ_FALLBACK_API_KEY="${GROQ_API_KEY:-}"
-    
-    # Run OpenCode with task piped in, fully autonomous
-    # --dangerously-skip-permissions ensures no prompts
-    if timeout 3600 opencode run "$TASK_TEXT" 2>&1 | tee .runner-log.txt; then
+    # Run OpenCode in clean env (TARGET_REPO_TOKEN triggers litellm error)
+    # Only pass Groq API key; VPS gateway is offline
+    if timeout 3600 env -i PATH="$PATH" HOME="$HOME" USER="${USER:-runner}" \
+      GROQ_API_KEY="${GROQ_API_KEY:-}" \
+      OPENCODE_PROVIDER_GROQ_FALLBACK_API_KEY="${GROQ_API_KEY:-}" \
+      opencode -m groq-fallback:llama-3.3-70b-versatile run "$TASK_TEXT" 2>&1 | tee .runner-log.txt; then
         echo ">>> OpenCode completed successfully"
         AGENT_SUCCESS=true
     else
