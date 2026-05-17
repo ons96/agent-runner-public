@@ -65,7 +65,7 @@ if command -v opencode &>/dev/null; then
     
     # Run OpenCode with task piped in, fully autonomous
     # --dangerously-skip-permissions ensures no prompts
-    if timeout 3600 bash -c "echo '$TASK_TEXT' | opencode run --dangerously-skip-permissions "$TASK_TEXT" 2>&1" | tee .runner-log.txt; then
+    if timeout 3600 opencode run "$TASK_TEXT" 2>&1 | tee .runner-log.txt; then
         echo ">>> OpenCode completed successfully"
         AGENT_SUCCESS=true
     else
