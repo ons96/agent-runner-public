@@ -9,9 +9,21 @@
       "type": "openai",
       "baseURL": "http://40.233.101.233:8000/v1",
       "models": {
-        "coding-elite": { "name": "coding-elite", "contextWindow": 128000, "maxOutputTokens": 16000 },
-        "coding-smart": { "name": "coding-smart", "contextWindow": 128000, "maxOutputTokens": 16000 },
-        "coding-fast": { "name": "coding-fast", "contextWindow": 32000, "maxOutputTokens": 8000 }
+        "coding-elite": {
+          "name": "coding-elite",
+          "contextWindow": 128000,
+          "maxOutputTokens": 16000
+        },
+        "coding-smart": {
+          "name": "coding-smart",
+          "contextWindow": 128000,
+          "maxOutputTokens": 16000
+        },
+        "coding-fast": {
+          "name": "coding-fast",
+          "contextWindow": 32000,
+          "maxOutputTokens": 8000
+        }
       }
     },
     "groq-fallback": {
@@ -19,17 +31,21 @@
       "type": "openai",
       "baseURL": "https://api.groq.com/openai/v1",
       "models": {
-        "llama-3.3-70b-versatile": { "name": "llama-3.3-70b-versatile", "contextWindow": 128000, "maxOutputTokens": 8000 }
+        "llama-3.3-70b-versatile": {
+          "name": "llama-3.3-70b-versatile",
+          "contextWindow": 128000,
+          "maxOutputTokens": 8000
+        }
       }
     }
   },
   "agents": {
     "default": {
-      "model": "groq-fallback:llama-3.3-70b-versatile",
+      "model": "groq/llama-3.3-70b-versatile",
       "maxTokens": 8000
     },
     "task": {
-      "model": "groq-fallback:llama-3.3-70b-versatile",
+      "model": "groq/llama-3.3-70b-versatile",
       "maxTokens": 8000
     }
   },

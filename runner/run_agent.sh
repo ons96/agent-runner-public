@@ -64,7 +64,7 @@ if command -v opencode &>/dev/null; then
     if timeout 3600 env -i PATH="$PATH" HOME="$HOME" USER="${USER:-runner}" \
       GROQ_API_KEY="${GROQ_API_KEY:-}" \
       OPENCODE_PROVIDER_GROQ_FALLBACK_API_KEY="${GROQ_API_KEY:-}" \
-      opencode -m groq-fallback:llama-3.3-70b-versatile run "$TASK_TEXT" 2>&1 | tee .runner-log.txt; then
+      opencode -m groq/llama-3.3-70b-versatile run "$TASK_TEXT" 2>&1 | tee .runner-log.txt; then
         echo ">>> OpenCode completed successfully"
         AGENT_SUCCESS=true
     else
