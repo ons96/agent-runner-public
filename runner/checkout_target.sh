@@ -3,25 +3,14 @@ set -euo pipefail
 
 PACKET_FILE="${1:?Usage: checkout_target.sh <packet.json>}"
 TARGET_ROOT="${2:-target-repo}"
-TARGET_REPO=$(python3 - <<'PY' "$PACKET_FILE"
+read -r TARGET_REPO TARGET_BRANCH WORK_BRANCH < <(python3 - <<'PY' "$PACKET_FILE"
 import json, sys
 from pathlib import Path
 packet = json.loads(Path(sys.argv[1]).read_text())
-print(packet['target_repo'])
-PY
-)
-TARGET_BRANCH=$(python3 - <<'PY' "$PACKET_FILE"
-import json, sys
-from pathlib import Path
-packet = json.loads(Path(sys.argv[1]).read_text())
-print(packet['target_branch'])
-PY
-)
-WORK_BRANCH=$(python3 - <<'PY' "$PACKET_FILE"
-import json, sys
-from pathlib import Path
-packet = json.loads(Path(sys.argv[1]).read_text())
-print(packet['work_branch'])
+repo = packet.get('target_repo', packet.get('repo', ''))
+target = packet.get('target_branch', 'main')
+work = packet.get('work_branch', packet.get('branch', f"agent/auto-{repo.split('/')[-1][:20]}"))
+print(f"{repo}\t{target}\t{work}")
 PY
 )
 
@@ -40,6 +29,6 @@ fi
 rm -rf "$TARGET_ROOT"
 git clone --quiet "https://x-access-token:${TARGET_REPO_TOKEN}@github.com/${TARGET_REPO}.git" "$TARGET_ROOT" >&2
 cd "$TARGET_ROOT"
-git checkout --quiet "$TARGET_BRANCH" >&2
+git checkout --quiet "$TARGET_BRANCH" >&2 || git checkout --quiet -b "$TARGET_BRANCH" >&2
 git checkout --quiet -b "$WORK_BRANCH" >&2
 echo "$TARGET_ROOT"

@@ -1,11 +1,13 @@
 #!/usr/bin/env python3
+"""Validate task packet - supports both full and minimal formats."""
 
 import json
 import sys
 from pathlib import Path
 from typing import Any
 
-REQUIRED_KEYS = {
+# Full packet format requires all these keys
+FULL_PACKET_KEYS = {
     "task_id",
     "staging_repo",
     "target_repo",
@@ -15,6 +17,12 @@ REQUIRED_KEYS = {
     "allowed_paths",
     "acceptance_criteria",
     "merge_policy",
+}
+
+# Minimal packet format (from code-task event) requires only these
+MINIMAL_PACKET_KEYS = {
+    "target_repo",
+    "task",
 }
 
 
@@ -30,14 +38,30 @@ def main() -> None:
         raise SystemExit("Usage: validate_packet.py <packet.json>")
 
     packet = load_packet(sys.argv[1])
-    missing = sorted(REQUIRED_KEYS - set(packet))
-    if missing:
-        raise SystemExit(f"Packet missing keys: {', '.join(missing)}")
-
-    if packet["merge_policy"] == "blocked":
-        raise SystemExit("Packet is blocked by merge policy")
-
-    print("Packet validation passed")
+    
+    # Check if it's a full packet or minimal packet
+    has_full_keys = FULL_PACKET_KEYS.issubset(set(packet))
+    has_minimal_keys = MINIMAL_PACKET_KEYS.issubset(set(packet))
+    
+    if has_full_keys:
+        # Full packet validation
+        if packet.get("merge_policy") == "blocked":
+            raise SystemExit("Packet is blocked by merge policy")
+        print("Full packet validation passed")
+    elif has_minimal_keys:
+        # Minimal packet - just needs repo and task
+        repo = packet.get("target_repo", "")
+        if not repo or "/" not in repo:
+            raise SystemExit(f"Invalid target_repo: {repo}")
+        print("Minimal packet validation passed")
+    else:
+        # Neither format matches
+        missing_full = sorted(FULL_PACKET_KEYS - set(packet))
+        missing_minimal = sorted(MINIMAL_PACKET_KEYS - set(packet))
+        raise SystemExit(
+            f"Invalid packet. Missing for full format: {', '.join(missing_full)}. "
+            f"Missing for minimal format: {', '.join(missing_minimal)}"
+        )
 
 
 if __name__ == "__main__":
