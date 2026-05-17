@@ -3,15 +3,11 @@
   "permissions": {
     "*": "allow"
   },
-  "providers": {},
   "agents": {
     "default": {
       "model": "opencode/deepseek-v4-flash-free",
-      "maxTokens": 8000
-    },
-    "task": {
-      "model": "opencode/deepseek-v4-flash-free",
-      "maxTokens": 8000
+      "maxTokens": 8000,
+      "prompt": "You are a coding agent running in a CI/CD pipeline. Your job is to EXECUTE tasks immediately without any interaction. Given a task description, create the necessary files and implement the solution. Do NOT ask questions, do NOT ask for clarification, do NOT propose alternatives. Just do the work and create the files."
     }
   },
   "mcp": {},

@@ -1,11 +1,10 @@
 #!/usr/bin/env bash
-# run_agent.sh - Execute agentic coding task via LLM API (autonomous, headless)
 set -euo pipefail
 
 PACKET_FILE="${1:?Usage: run_agent.sh <packet.json> <target-root>}"
 TARGET_ROOT="${2:?Usage: run_agent.sh <packet.json> <target-root>}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-# Extract task details from packet
 read -r TARGET_REPO TASK_TEXT MODE < <(python3 - <<'PY' "$PACKET_FILE"
 import json, sys
 from pathlib import Path
@@ -28,81 +27,21 @@ cat > .runner-task.md << EOF
 # Runner Task
 **Repo:** $TARGET_REPO
 **Mode:** $MODE
-
 ## Task
 $TASK_TEXT
 EOF
 
-# =============================================================================
-# PRIMARY: Direct LLM API (reliable for headless use)
-# =============================================================================
-echo ">>> Calling LLM API..."
-python3 /dev/stdin "$TASK_TEXT" << 'PYEOF' 2>&1 | tee .runner-log.txt
-import json, os, re, sys, urllib.request
+if [ -f "$SCRIPT_DIR/opencode-runner.json" ]; then
+    cp "$SCRIPT_DIR/opencode-runner.json" .opencode.json
+fi
 
-task = sys.argv[1]
-
-prompt = f"""You are a coding agent running in a CI/CD pipeline.
-Implement the following task in the CURRENT directory.
-
-TASK:
-{task}
-
-IMPORTANT RULES:
-- Create ONLY the files specified in the task
-- Keep it simple - no unnecessary files
-- Include a README.md with usage instructions
-- Respond with ONLY valid JSON in this format:
-{{"files": [{{"path": "filename.txt", "content": "file content here"}}]}}"""
-
-endpoints = []
-
-# Groq (from environment)
-gk = os.environ.get("GROQ_API_KEY", "")
-if gk:
-    endpoints.append(("https://api.groq.com/openai/v1/chat/completions", gk, "llama-3.3-70b-versatile"))
-
-# VPS gateway (from environment)
-pk = os.environ.get("PROXY_API_KEY", "")
-if pk and pk != "poop96":
-    endpoints.append(("http://40.233.101.233:8000/v1/chat/completions", pk, "coding-elite"))
-
-for url, api_key, model in endpoints:
-    try:
-        headers = {
-            "Authorization": f"Bearer {api_key}",
-            "Content-Type": "application/json"
-        }
-        data = json.dumps({
-            "model": model,
-            "messages": [{"role": "user", "content": prompt}],
-            "max_tokens": 4000,
-            "temperature": 0.3
-        }).encode()
-        req = urllib.request.Request(url, data, headers)
-        resp = urllib.request.urlopen(req, timeout=180)
-        result = json.loads(resp.read())
-        content = result["choices"][0]["message"]["content"]
-        print(f"OK {url} ({model})")
-
-        match = re.search(r'\{[\s\S]*"files"[\s\S]*?\}', content)
-        if match:
-            files_data = json.loads(match.group())
-            for f in files_data.get("files", []):
-                path = f["path"]
-                os.makedirs(os.path.dirname(path), exist_ok=True)
-                with open(path, "w") as fp:
-                    fp.write(f["content"])
-                print(f"  created: {path}")
-            break
-        else:
-            print(f"no JSON in response: {content[:200]}")
-    except Exception as e:
-        print(f"  {url} failed: {e}")
-        continue
-else:
-    print("All endpoints failed")
-PYEOF
+echo ">>> Running OpenCode..."
+if timeout 3600 env -i PATH="$PATH" HOME="$HOME" \
+  opencode --dangerously-skip-permissions -m opencode/deepseek-v4-flash-free run "$TASK_TEXT" 2>&1 | tee .runner-log.txt; then
+    echo ">>> OpenCode completed"
+else
+    echo ">>> OpenCode failed or timed out"
+fi
 
 echo "=== Agent run complete ==="
 ls -la
