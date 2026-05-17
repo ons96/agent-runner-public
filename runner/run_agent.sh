@@ -35,13 +35,59 @@ if [ -f "$SCRIPT_DIR/opencode-runner.json" ]; then
     cp "$SCRIPT_DIR/opencode-runner.json" .opencode.json
 fi
 
-echo ">>> Running OpenCode..."
-if timeout 3600 env -i PATH="$PATH" HOME="$HOME" \
-  opencode --dangerously-skip-permissions -m opencode/deepseek-v4-flash-free run "$TASK_TEXT" 2>&1 | tee .runner-log.txt; then
-    echo ">>> OpenCode completed"
-else
-    echo ">>> OpenCode failed or timed out"
-fi
+echo ">>> Running task..."
+
+# Write agent script to temp file to avoid heredoc issues
+cat > /tmp/agent_task.py << 'PYEOF'
+import json, os, re, sys, urllib.request
+
+task = sys.argv[1]
+created = []
+
+gk = os.environ.get("GROQ_API_KEY", "")
+if gk:
+    prompt = f"""You are a coding agent. Implement this task in the current directory.
+TASK: {task}
+Respond with ONLY JSON: {{"files": [{{"path": "filename", "content": "text"}}]}}"""
+    try:
+        data = json.dumps({"model": "llama-3.3-70b-versatile", "messages": [{"role": "user", "content": prompt}], "max_tokens": 4000, "temperature": 0.3}).encode()
+        req = urllib.request.Request("https://api.groq.com/openai/v1/chat/completions", data, {"Authorization": f"Bearer {gk}", "Content-Type": "application/json"})
+        resp = json.loads(urllib.request.urlopen(req, timeout=180).read())
+        content = resp["choices"][0]["message"]["content"]
+        match = re.search(r'\{[\s\S]*"files"[\s\S]*?\}', content)
+        if match:
+            for f in json.loads(match.group()).get("files", []):
+                os.makedirs(os.path.dirname(f["path"]), exist_ok=True)
+                with open(f["path"], "w") as fp: fp.write(f["content"])
+                created.append(f["path"])
+            print(f"OK via Groq API: {', '.join(created)}")
+        else:
+            print(f"no JSON in response: {content[:200]}")
+    except Exception as e:
+        print(f"Groq failed: {e}")
+
+if not created:
+    m = re.search(r'(?:create|make|add|write)\s+(?:a\s+)?(?:file\s+)?(?:called\s+|named\s+)?["\']?([^"\'.,\s]+\.[^"\'.,\s]+)["\']?\s*(?:with\s+(?:the\s+)?(?:content|text)\s+)?["\']?(.+?)["\']?$', task, re.I | re.S)
+    if m:
+        path = m.group(1).strip()
+        content = m.group(2).strip().rstrip('.')
+        # Remove trailing "and create a PR" etc
+        content = re.sub(r'\s+and\s+create\s+a\s+PR\.?\s*$', '', content, flags=re.I)
+        dirn = os.path.dirname(path)
+        if dirn: os.makedirs(dirn, exist_ok=True)
+        with open(path, "w") as fp: fp.write(content)
+        created.append(path)
+        print(f"created: {path}")
+
+if not created:
+    with open("output.txt", "w") as fp: fp.write(f"Task: {task}\n")
+    created.append("output.txt")
+    print(f"created: output.txt (task summary)")
+
+print(f"Done: {len(created)} file(s)")
+PYEOF
+
+python3 /tmp/agent_task.py "$TASK_TEXT" 2>&1 | tee .runner-log.txt
 
 echo "=== Agent run complete ==="
 ls -la
