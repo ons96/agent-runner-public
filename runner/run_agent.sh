@@ -13,7 +13,7 @@ import json, sys
 from pathlib import Path
 packet = json.loads(Path(sys.argv[1]).read_text())
 repo = packet.get('target_repo', packet.get('repo', ''))
-task = packet.get('task', packet.get('task_summary', 'implement the project'))
+task = packet.get('task_prompt') or packet.get('task') or packet.get('task_summary', 'implement the project')
 mode = packet.get('mode', 'implement')
 print(f"{repo}\t{task[:500]}\t{mode}")
 PY
@@ -65,7 +65,7 @@ if command -v opencode &>/dev/null; then
     
     # Run OpenCode with task piped in, fully autonomous
     # --dangerously-skip-permissions ensures no prompts
-    if timeout 3600 bash -c "echo '$TASK_TEXT' | opencode --dangerously-skip-permissions 2>&1" | tee .runner-log.txt; then
+    if timeout 3600 bash -c "echo '$TASK_TEXT' | opencode run --dangerously-skip-permissions --print "$TASK_TEXT" 2>&1" | tee .runner-log.txt; then
         echo ">>> OpenCode completed successfully"
         AGENT_SUCCESS=true
     else
